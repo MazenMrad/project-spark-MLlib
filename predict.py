@@ -1,6 +1,20 @@
 """Charge le modèle Random Forest sauvegardé et prédit l'arrestation pour quelques crimes.
 Usage : python predict.py
 """
+import os, sys, glob
+
+# Utilise le Java 17 + winutils portables du projet (Spark 3.5 ne marche pas avec Java 25)
+ROOT = os.path.dirname(os.path.abspath(__file__))
+jdk = glob.glob(os.path.join(ROOT, ".tools", "jdk-17*"))
+if jdk:
+    os.environ["JAVA_HOME"] = jdk[0]
+    os.environ["HADOOP_HOME"] = os.path.join(ROOT, ".tools", "hadoop")
+    os.environ["PATH"] = os.pathsep.join([os.path.join(jdk[0], "bin"),
+                                          os.path.join(ROOT, ".tools", "hadoop", "bin"),
+                                          os.environ["PATH"]])
+os.environ["PYSPARK_PYTHON"] = sys.executable
+os.chdir(ROOT)
+
 from pyspark.sql import SparkSession
 from pyspark.ml import PipelineModel
 

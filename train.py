@@ -23,14 +23,23 @@ from pyspark.ml.evaluation import (BinaryClassificationEvaluator,
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 os.chdir(ROOT)
-SAMPLE = float(sys.argv[1]) if len(sys.argv) > 1 else 1.0
+import argparse
+ap = argparse.ArgumentParser()
+ap.add_argument("sample", nargs="?", type=float, default=1.0, help="fraction des données (ex: 0.1)")
+ap.add_argument("--api", type=int, metavar="N", help="télécharger N lignes via l'API Socrata au lieu du CSV")
+args = ap.parse_args()
+SAMPLE = args.sample
 CSV, PARQUET, OUT = "data/Crimes.csv", "data/crimes.parquet", "results"
 os.makedirs(OUT, exist_ok=True)
+os.makedirs("spark-events", exist_ok=True)   # historique pour le Spark History Server
 
 def log(msg):
     print(f"[{time.strftime('%H:%M:%S')}] {msg}", flush=True)
 
+from pathlib import Path
 spark = (SparkSession.builder.appName("ChicagoCrime-MLlib")
+         .config("spark.eventLog.enabled", "true")
+         .config("spark.eventLog.dir", Path(ROOT, "spark-events").as_uri())
          .config("spark.sql.shuffle.partitions", "16")
          .config("spark.sql.execution.arrow.pyspark.enabled", "true")
          .getOrCreate())
@@ -38,13 +47,28 @@ spark.sparkContext.setLogLevel("ERROR")
 log(f"Spark {spark.version} — UI : {spark.sparkContext.uiWebUrl}")
 
 # ---------- 1. Chargement ----------
-if not os.path.exists(PARQUET):
-    log("Conversion CSV -> Parquet...")
-    raw = spark.read.csv(CSV, header=True)
-    for c in raw.columns:
-        raw = raw.withColumnRenamed(c, c.strip().lower().replace(" ", "_"))
-    raw.write.mode("overwrite").parquet(PARQUET)
-raw = spark.read.parquet(PARQUET)
+def norm(d):
+    for c in d.columns:
+        d = d.withColumnRenamed(c, c.strip().lower().replace(" ", "_"))
+    return d
+
+if args.api:
+    import requests
+    log(f"Téléchargement de {args.api:,} lignes via l'API Socrata...")
+    url = "https://data.cityofchicago.org/resource/ijzp-q8t2.csv"
+    params = {"$limit": args.api, "$where": "latitude IS NOT NULL", "$order": "date DESC",
+              "$select": "id,date,primary_type,location_description,arrest,domestic,"
+                         "beat,district,ward,community_area,year,latitude,longitude"}
+    api_csv = "data/api_sample.csv"
+    os.makedirs("data", exist_ok=True)
+    with open(api_csv, "wb") as f:
+        f.write(requests.get(url, params=params, timeout=600).content)
+    raw = norm(spark.read.csv(api_csv, header=True))
+else:
+    if not os.path.exists(PARQUET):
+        log("Conversion CSV -> Parquet...")
+        norm(spark.read.csv(CSV, header=True)).write.mode("overwrite").parquet(PARQUET)
+    raw = spark.read.parquet(PARQUET)
 
 # ---------- 2. Nettoyage ----------
 to_bool = lambda c: F.when(F.lower(F.col(c)) == "true", 1).otherwise(0)

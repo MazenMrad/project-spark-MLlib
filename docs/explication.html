@@ -1,0 +1,241 @@
+<title>Spark MLlib Chicago Crime</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;700;800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one reading column, each section = one question from the jury; data figures drawn to scale */
+:root{
+  --bg:#f6f7f9; --surface:#ffffff; --fg:#17202b; --muted:#5b6675; --line:#dde2e8;
+  --accent:#e25a1c; --accent-soft:#fde9df; --train:#2f6fb3; --test:#e25a1c; --drop:#a7b0bc;
+  --good:#2b8a57; --bad:#c2412d;
+  --display:"Archivo",system-ui,sans-serif; --body:"IBM Plex Sans",system-ui,sans-serif; --mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#11161d; --surface:#18202a; --fg:#e7ecf2; --muted:#9aa6b4; --line:#2a3542;
+  --accent:#ff7a3d; --accent-soft:#3a2418; --train:#5b9be0; --test:#ff7a3d; --drop:#55606d;
+  --good:#4cc488; --bad:#ef6f5a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#11161d; --surface:#18202a; --fg:#e7ecf2; --muted:#9aa6b4; --line:#2a3542;
+  --accent:#ff7a3d; --accent-soft:#3a2418; --train:#5b9be0; --test:#ff7a3d; --drop:#55606d;
+  --good:#4cc488; --bad:#ef6f5a; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font:16px/1.6 var(--body);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:40px 80px}
+main{max-width:860px;margin:0 auto;display:flex;flex-direction:column;gap:56px}
+h1,h2,h3{font-family:var(--display);line-height:1.15;text-wrap:balance;margin:0}
+h1{font-size:clamp(2rem,5vw,3rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.6rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0;max-width:68ch}
+.eyebrow{font:500 .75rem var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--accent)}
+section{display:flex;flex-direction:column;gap:18px}
+.lead{color:var(--muted);font-size:1.1rem}
+code,.mono{font-family:var(--mono);font-size:.88em}
+.num{font-variant-numeric:tabular-nums}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:520px;font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font:600 .78rem var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+td.hl{color:var(--accent);font-weight:600}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:16px}
+.grid2>*{min-width:0}
+ul{margin:0;padding-left:1.2em;display:flex;flex-direction:column;gap:6px}
+svg text{fill:var(--fg);font-family:var(--mono)}
+svg .mut{fill:var(--muted)}
+.legend{display:flex;flex-wrap:wrap;gap:16px;font:.85rem var(--mono);color:var(--muted)}
+.legend i{display:inline-block;width:12px;height:12px;border-radius:2px;margin-right:6px;vertical-align:-1px}
+.flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:8px}
+.step{flex:1 1 150px;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:6px}
+.step b{font-family:var(--mono);font-size:.85rem;color:var(--accent)}
+.step span{font-size:.88rem;color:var(--muted)}
+.arrow{align-self:center;color:var(--muted);font-family:var(--mono)}
+.cm{display:grid;grid-template-columns:auto 1fr 1fr;gap:6px;max-width:460px;font-variant-numeric:tabular-nums}
+.cm div{padding:12px;border-radius:6px;text-align:center}
+.cm .h{font:600 .75rem var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;align-items:center;justify-content:center}
+.cm .ok{background:color-mix(in srgb,var(--good) 18%,transparent)}
+.cm .ko{background:color-mix(in srgb,var(--bad) 16%,transparent)}
+.cm strong{display:block;font:700 1.25rem var(--display)}
+.cm small{color:var(--muted);font-size:.78rem}
+pre{margin:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;font:.85rem/1.55 var(--mono)}
+.note{border-left:3px solid var(--accent);padding:4px 0 4px 14px;color:var(--muted)}
+</style>
+
+<main>
+<header style="display:flex;flex-direction:column;gap:14px">
+  <span class="eyebrow">Projet Spark MLlib · Chicago Crime · 1 000 000 crimes</span>
+  <h1>Comment le projet fonctionne</h1>
+  <p class="lead">Pourquoi Spark, ce que deviennent les données, comment elles sont séparées, et ce que les modèles ont appris. Tous les chiffres viennent du run complet sur 1M de lignes.</p>
+</header>
+
+<!-- 1 -->
+<section>
+  <span class="eyebrow">Question 1</span>
+  <h2>Pourquoi Spark ?</h2>
+  <p>Le dataset complet de Chicago fait plus de 8 millions de lignes (~2 Go). Pandas charge tout en mémoire sur une seule machine et sur un seul cœur. Spark découpe les données en <b>partitions</b> et les traite en parallèle, sur tous les cœurs du PC ou sur un cluster de plusieurs machines, <b>avec le même code</b>.</p>
+  <div class="panel scroll">
+  <table>
+    <tr><th>Critère</th><th>Pandas / scikit-learn</th><th>Hadoop MapReduce</th><th>Apache Spark</th></tr>
+    <tr><td>Exécution</td><td>1 machine, 1 cœur</td><td>Distribuée</td><td class="hl">Distribuée</td></tr>
+    <tr><td>Données intermédiaires</td><td>RAM</td><td>Écrites sur disque à chaque étape</td><td class="hl">Gardées en mémoire (cache)</td></tr>
+    <tr><td>Limite de taille</td><td>La RAM de la machine</td><td>Aucune pratique</td><td class="hl">Aucune pratique</td></tr>
+    <tr><td>Machine learning</td><td>scikit-learn (non distribué)</td><td>Mahout (abandonné)</td><td class="hl">MLlib intégré, distribué</td></tr>
+    <tr><td>Itératif (ML)</td><td>Rapide si ça tient en RAM</td><td>Très lent (relit le disque)</td><td class="hl">Rapide (jusqu'à ~100× vs MapReduce)</td></tr>
+    <tr><td>Langages</td><td>Python</td><td>Java</td><td class="hl">Python, Scala, Java, R, SQL</td></tr>
+  </table>
+  </div>
+  <p class="note">Les algorithmes de ML sont <b>itératifs</b> : la régression logistique repasse 50 fois sur les données, KMeans aussi. Avec MapReduce chaque passage relit le disque ; Spark garde les données en mémoire avec <code>df.cache()</code>. C'est la raison principale du choix.</p>
+
+  <h3>Ce qui s'est passé sur ton PC</h3>
+  <p>Mode <code>local[*]</code> : le <b>driver</b> (ton script Python) découpe le travail en tâches, et 16 <b>executors</b> légers (un par cœur logique) les exécutent en parallèle. Dans les logs tu voyais <code>(14 + 2) / 16</code> : 14 tâches finies, 2 en cours, sur 16.</p>
+  <div class="panel scroll">
+  <svg viewBox="0 0 760 210" width="100%" role="img" aria-label="Driver qui distribue 16 partitions à 16 cœurs">
+    <rect x="10" y="70" width="150" height="70" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="85" y="100" text-anchor="middle" font-weight="600">Driver</text>
+    <text x="85" y="122" text-anchor="middle" class="mut" font-size="12">train.py</text>
+    <g id="cores"></g>
+    <text x="230" y="200" class="mut" font-size="12">1M lignes → 16 partitions → 16 tâches en parallèle</text>
+  </svg>
+  </div>
+</section>
+
+<!-- 2 -->
+<section>
+  <span class="eyebrow">Question 2</span>
+  <h2>Comment les données ont été séparées</h2>
+  <p>Trois étapes : nettoyage, puis découpage aléatoire 80 / 20 avec <code>randomSplit([0.8, 0.2], seed=42)</code>. Le <code>seed</code> fixe le hasard : relancer donne exactement le même découpage, donc des résultats reproductibles.</p>
+  <div class="panel">
+  <svg viewBox="0 0 760 200" width="100%" role="img" aria-label="Barres proportionnelles : 1 000 000 lignes, 991 557 après nettoyage, 793 154 train et 198 403 test">
+    <text x="0" y="22" font-size="13">Données brutes (API)</text>
+    <rect x="0" y="30" width="760" height="26" rx="3" fill="var(--drop)"/>
+    <text x="10" y="48" font-size="12" fill="var(--bg)">1 000 000</text>
+
+    <text x="0" y="90" font-size="13">Après nettoyage</text>
+    <rect x="0" y="98" width="753.6" height="26" rx="3" fill="var(--fg)" opacity=".75"/>
+    <rect x="753.6" y="98" width="6.4" height="26" fill="var(--bad)"/>
+    <text x="10" y="116" font-size="12" fill="var(--bg)">991 557</text>
+    <text x="745" y="90" font-size="11" text-anchor="end" class="mut">−8 443 supprimées</text>
+
+    <text x="0" y="158" font-size="13">Découpage</text>
+    <rect x="0" y="166" width="602.8" height="26" rx="3" fill="var(--train)"/>
+    <rect x="605.8" y="166" width="150.8" height="26" rx="3" fill="var(--test)"/>
+    <text x="10" y="184" font-size="12" fill="#fff">Train 793 154 (80 %)</text>
+    <text x="614" y="184" font-size="12" fill="#fff">Test 198 403</text>
+  </svg>
+  </div>
+  <div class="grid2">
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Nettoyage : 8 443 lignes retirées</h3>
+      <ul>
+        <li>date illisible</li>
+        <li>latitude / longitude manquantes</li>
+        <li>coordonnées hors de Chicago (lat ≤ 41 ou long ≥ −87)</li>
+        <li>type de crime ou district manquant</li>
+      </ul>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Pourquoi 80 / 20 ?</h3>
+      <p>Le modèle apprend sur le <b>train</b>. Le <b>test</b> est caché pendant l'entraînement : on mesure la qualité sur des crimes que le modèle n'a jamais vus. Sinon il pourrait juste « mémoriser ».</p>
+    </div>
+  </div>
+
+  <h3>Le déséquilibre des classes</h3>
+  <p>Seulement <b>14,18 %</b> des crimes mènent à une arrestation. Un modèle qui répond toujours « pas d'arrestation » aurait déjà 86 % d'accuracy sans rien apprendre. On donne donc un <b>poids</b> à chaque ligne pour que les deux classes comptent autant :</p>
+  <div class="panel">
+  <svg viewBox="0 0 760 120" width="100%" role="img" aria-label="85,8 % sans arrestation, 14,2 % avec arrestation">
+    <rect x="0" y="10" width="652.2" height="34" fill="var(--drop)"/>
+    <rect x="652.2" y="10" width="107.8" height="34" fill="var(--accent)"/>
+    <text x="10" y="32" font-size="13" fill="var(--bg)">Pas d'arrestation 85,8 %</text>
+    <text x="755" y="32" font-size="13" text-anchor="end" fill="#fff">14,2 %</text>
+    <text x="0" y="78" font-size="13">poids = 0,142 par ligne</text>
+    <text x="760" y="78" font-size="13" text-anchor="end">poids = 0,858 par ligne</text>
+    <text x="380" y="108" font-size="12" text-anchor="middle" class="mut">85,8 % × 0,142 ≈ 14,2 % × 0,858 → les deux classes pèsent pareil</text>
+  </svg>
+  </div>
+</section>
+
+<!-- 3 -->
+<section>
+  <span class="eyebrow">Question 3</span>
+  <h2>Le pipeline MLlib</h2>
+  <p>MLlib ne comprend que des nombres réunis dans un seul vecteur <code>features</code>. Le <code>Pipeline</code> enchaîne les transformations puis le modèle, et se sauvegarde en un seul bloc dans <code>models/</code>.</p>
+  <div class="flow">
+    <div class="step"><b>StringIndexer</b><span>"THEFT" → 0<br>"BATTERY" → 1</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>OneHotEncoder</b><span>1 → [0,1,0,0…]<br>pas d'ordre artificiel</span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>VectorAssembler</b><span>catégories + heure, jour, district, lat, long → <code>features</code></span></div>
+    <div class="arrow">→</div>
+    <div class="step"><b>Modèle</b><span>LogisticRegression ou RandomForest → 0 / 1 + probabilité</span></div>
+  </div>
+  <p class="note">Transformer = applique une règle (<code>transform</code>). Estimator = apprend sur les données (<code>fit</code>) et produit un Transformer. Un Pipeline entier est un Estimator.</p>
+</section>
+
+<!-- 4 -->
+<section>
+  <span class="eyebrow">Question 4</span>
+  <h2>Résultats</h2>
+  <div class="panel scroll">
+  <table>
+    <tr><th>Modèle</th><th>AUC</th><th>Accuracy</th><th>F1</th><th>Entraînement</th></tr>
+    <tr><td>Logistic Regression</td><td>0,835</td><td>73,4 %</td><td>0,771</td><td>2 min 13 s</td></tr>
+    <tr><td>Random Forest (50 arbres)</td><td>0,835</td><td class="hl">76,3 %</td><td class="hl">0,793</td><td>4 min 11 s</td></tr>
+  </table>
+  </div>
+  <p><b>AUC</b> : probabilité que le modèle classe une vraie arrestation plus haut qu'une non-arrestation (0,5 = hasard, 1 = parfait). <b>F1</b> : équilibre entre précision et rappel.</p>
+
+  <h3>Matrice de confusion — Random Forest, sur les 198 403 crimes du test</h3>
+  <div class="cm">
+    <div></div><div class="h">Prédit : non</div><div class="h">Prédit : oui</div>
+    <div class="h">Réel : non</div>
+    <div class="ok"><strong class="num">131 012</strong><small>correct</small></div>
+    <div class="ko"><strong class="num">39 018</strong><small>fausse alerte</small></div>
+    <div class="h">Réel : oui</div>
+    <div class="ko"><strong class="num">7 930</strong><small>arrestation ratée</small></div>
+    <div class="ok"><strong class="num">20 443</strong><small>correct</small></div>
+  </div>
+  <p>Le modèle retrouve <b>72 %</b> des vraies arrestations (20 443 / 28 373). En échange il donne beaucoup de fausses alertes : c'est l'effet voulu des poids, qui favorisent la classe rare.</p>
+
+  <h3>Clustering KMeans : zones chaudes</h3>
+  <p>KMeans regroupe les crimes par position (latitude, longitude) sans étiquette. On a testé k = 4, 6, 8, 10 et gardé celui avec le meilleur <b>score silhouette</b> (proche de 1 = groupes bien séparés) : <b>k = 10, silhouette 0,53</b>. La zone la plus « arrêtée » a 20,8 % d'arrestations, la moins arrêtée 9,2 %.</p>
+</section>
+
+<!-- 5 -->
+<section>
+  <span class="eyebrow">Question 5</span>
+  <h2>Voir la Spark UI</h2>
+  <div class="grid2">
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <h3>En direct · port 4040</h3>
+      <p>Existe seulement tant qu'une session Spark tourne. Pas besoin d'entraîner : un shell suffit.</p>
+<pre>. .\env.ps1
+pyspark
+&gt;&gt;&gt; df = spark.read.parquet("data/crimes.parquet")
+&gt;&gt;&gt; df.groupBy("primary_type").count().show()</pre>
+      <p>Puis ouvrir <code>http://localhost:4040</code>. Laisser le shell ouvert.</p>
+    </div>
+    <div class="panel" style="display:flex;flex-direction:column;gap:10px">
+      <h3>Anciens runs · port 18080</h3>
+      <p>Le History Server relit les logs de chaque <code>spark-submit</code> passé, même après la fin du programme.</p>
+<pre>.\history.ps1</pre>
+      <p>Puis ouvrir <code>http://localhost:18080</code>. Ctrl+C pour arrêter.</p>
+    </div>
+  </div>
+  <p class="note">Onglets à montrer pendant la démo : <b>Jobs</b> (chaque action Spark), <b>Stages</b> (les 16 tâches parallèles), <b>Storage</b> (les DataFrames en cache), <b>SQL</b> (le plan d'exécution), <b>Executors</b> (mémoire et CPU).</p>
+</section>
+</main>
+
+<script>
+const g=document.getElementById("cores"),ns="http://www.w3.org/2000/svg";
+for(let i=0;i<16;i++){
+  const col=i%8,row=Math.floor(i/8),x=230+col*64,y=40+row*70;
+  const r=document.createElementNS(ns,"rect");
+  Object.entries({x,y,width:54,height:48,rx:6,fill:"var(--surface)",stroke:"var(--train)"}).forEach(([k,v])=>r.setAttribute(k,v));
+  const t=document.createElementNS(ns,"text");
+  Object.entries({x:x+27,y:y+29,"text-anchor":"middle","font-size":"12"}).forEach(([k,v])=>t.setAttribute(k,v));
+  t.textContent="cœur "+(i+1);
+  const l=document.createElementNS(ns,"line");
+  Object.entries({x1:160,y1:105,x2:x,y2:y+24,stroke:"var(--line)"}).forEach(([k,v])=>l.setAttribute(k,v));
+  g.append(l,r,t);
+}
+</script>

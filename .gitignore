@@ -9,3 +9,5 @@ derby.log
 .venv/
 .tools/
 run.log
+spark-events/
+history.log
